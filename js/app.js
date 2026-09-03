@@ -1,10 +1,5 @@
 import { TRANSLATIONS } from './translations.js';
 
-// Analytics helper
-function track(event, params = {}) {
-    if (typeof gtag === 'function') gtag('event', event, params);
-}
-
 // Constants
 const BUNDLE_SIZE = 100;
 const BLOCK_SIZE = 30;
@@ -726,7 +721,6 @@ function createCurrencyButtons() {
             updateCurrencyButtons();
             updateCurrencyBackground();
             saveSettings();
-            track('select_currency', { currency: currency.code });
         });
     });
 }
@@ -1068,7 +1062,6 @@ function displayResults(data) {
 // Form submission handler
 document.getElementById('calculatorForm').addEventListener('submit', (e) => {
     e.preventDefault();
-    track('calculate', { currency: currentCurrency, asset_type: assetType, stock_mode: stockMode, amount: document.getElementById('amount').value });
     
     // Check if we need to stop calculation
     if (isCalculating) {
@@ -1081,7 +1074,6 @@ document.getElementById('calculatorForm').addEventListener('submit', (e) => {
         // Reset state
         isCalculating = false;
         stopCalculationRequested = true;
-        track('calculation_stopped', { currency: currentCurrency });
         
         // Reset button
         const calculateBtn = document.getElementById('calculateBtn');
@@ -1374,13 +1366,6 @@ document.getElementById('calculatorForm').addEventListener('submit', (e) => {
                     
                     // Store results
                     lastResults = result;
-                    track('calculation_complete', {
-                        currency: result.currency,
-                        variants: result.variants.length,
-                        has_ideal: result.has_ideal,
-                        has_partial: result.has_partial,
-                        stopped: false
-                    });
                     
                     // Show display order switch
                     displayOrderSwitch.style.display = 'flex';
@@ -1450,13 +1435,6 @@ document.getElementById('calculatorForm').addEventListener('submit', (e) => {
 
             // Store and display final results
             lastResults = result;
-            track('calculation_complete', {
-                currency: result.currency,
-                variants: result.variants.length,
-                has_ideal: hasIdeal,
-                has_partial: hasPartial,
-                stopped: !!stopped
-            });
 
             // Show display order switch
             displayOrderSwitch.style.display = 'flex';
@@ -1576,7 +1554,6 @@ document.querySelectorAll('.lang-btn').forEach(btn => {
         const lang = btn.dataset.lang;
         applyLanguage(lang);
         saveSettings();
-        track('switch_language', { language: lang });
         // Re-render stock inputs with new language but preserve stock mode
         updateStockInputs();
         // Re-render results if they exist
@@ -1591,7 +1568,6 @@ document.getElementById('themeToggleBtn').addEventListener('click', () => {
     const next = currentTheme === 'dark' ? 'light' : 'dark';
     applyTheme(next);
     saveSettings();
-    track('switch_theme', { theme: next });
 });
 
 
@@ -1604,7 +1580,6 @@ document.addEventListener('click', (e) => {
         displayOrder = btn.dataset.order;
         updateDisplayOrderButtons();
         saveSettings();
-        track('switch_display_order', { order: displayOrder });
         // Re-render results if they exist
         if (lastResults) {
             displayResults(lastResults);
@@ -1622,7 +1597,6 @@ document.addEventListener('click', (e) => {
         updateStockInputs();
         updateCurrencyButtons();
         saveSettings();
-        track('switch_stock_mode', { mode: stockMode });
     }
     // Denomination order buttons
     else if (e.target.closest('#denominationOrderSwitch .order-btn')) {
@@ -1635,7 +1609,6 @@ document.addEventListener('click', (e) => {
         denominationOrder = btn.dataset.order;
         updateDenominationOrderButtons();
         saveSettings();
-        track('switch_denom_order', { order: denominationOrder });
         createMultiCurrencyTable();
         loadStockData(); // Reload data after recreating table
         updateCurrencyButtons();
@@ -1650,7 +1623,6 @@ document.addEventListener('click', (e) => {
         // Switch asset type
         assetType = btn.dataset.asset;
         updateAssetTypeButtons();
-        track('switch_asset_type', { type: assetType });
         updateCurrencyButtons(); // Update placeholder and step for amount field
         updateCurrencyBackground(); // Update background for bills/coins
         updateStockInputs();
@@ -1720,7 +1692,6 @@ document.addEventListener('change', (e) => {
     if (e.target.matches('#stockMultiCurrency input[type="checkbox"]')) {
         const denom = e.target.dataset.denom;
         const isEnabled = e.target.checked;
-        track('toggle_denomination', { denomination: denom, enabled: isEnabled, currency: currentCurrency });
         
         // Update visual state of the row
         const row = e.target.closest('tr');
@@ -2159,10 +2130,8 @@ async function executeOrder(variant) {
     );
     
     if (!confirmed) {
-        track('execute_order_cancelled', { currency: lastResults?.currency, asset_type: assetType });
         return false;
     }
-    track('execute_order_confirmed', { currency: lastResults?.currency, asset_type: assetType, value: variant.total_value });
 
     // Apply the stock changes (we already calculated them for preview)
     previewStockChanges.forEach(change => {
@@ -2207,7 +2176,6 @@ function showBlockVisualization(variant) {
 
     // Store current variant for execution
     currentVariantForExecution = variant;
-    track('open_block_modal', { currency: lastResults?.currency, asset_type: assetType, value: variant.total_value });
     
     let titleText = `${formatCurrency(variant.total_value, lastResults.currency)}`;
     title.querySelector('[data-i18n]').textContent = titleText;
@@ -2550,7 +2518,6 @@ function buildBlockVisualization(variant) {
         blockContainer.addEventListener('click', (e) => {
             e.stopPropagation();
             blockContainer.classList.toggle('collected');
-            track('toggle_block_collected', { collected: blockContainer.classList.contains('collected') });
             updateCollectedProgress(variant);
         });
 
@@ -2806,7 +2773,6 @@ document.getElementById('blockLayoutSwitch').addEventListener('click', (e) => {
         b.classList.toggle('active', b.dataset.layout === blockLayout);
     });
     saveSettings();
-    track('switch_block_layout', { layout: blockLayout });
     // Re-render if modal is open with a variant
     if (currentVariantForExecution) {
         buildBlockVisualization(currentVariantForExecution);
@@ -2817,7 +2783,6 @@ document.getElementById('blockLayoutSwitch').addEventListener('click', (e) => {
 // Execute order button handler
 document.getElementById('executeOrderBtn').addEventListener('click', async () => {
     if (currentVariantForExecution) {
-        track('execute_order', { currency: lastResults?.currency, asset_type: assetType, value: currentVariantForExecution.total_value });
         await executeOrder(currentVariantForExecution);
     }
 });
@@ -2836,7 +2801,6 @@ document.getElementById('blockModal').addEventListener('click', (e) => {
 
 // Clear results button handler
 document.getElementById('clearResultsBtn').addEventListener('click', () => {
-    track('clear_results');
     lastResults = null;
     const resultsDiv = document.getElementById('results');
     resultsDiv.innerHTML = `
@@ -2875,14 +2839,12 @@ function startTour() {
     tourStep = 0;
     document.getElementById('tourBackdrop').classList.add('active');
     document.getElementById('tourTooltip').classList.add('active');
-    track('tour_start');
     showTourStep();
 }
 
 function endTour() {
     document.getElementById('tourBackdrop').classList.remove('active');
     document.getElementById('tourTooltip').classList.remove('active');
-    track('tour_end', { step: tourStep, total: TOUR_STEPS.length, completed: tourStep >= TOUR_STEPS.length });
     tourPrevHighlight = null;
     localStorage.setItem('cash-cleaner-tour-done', '1');
 }
@@ -3034,7 +2996,6 @@ const MINI_TOURS = {
 function showHint(hintEl) {
     const tourKey = hintEl.getAttribute('data-hint-tour');
     if (tourKey && MINI_TOURS[tourKey]) {
-        track('help_hint', { type: 'mini_tour', topic: tourKey });
         const steps = typeof MINI_TOURS[tourKey] === 'function' ? MINI_TOURS[tourKey]() : MINI_TOURS[tourKey];
         startMiniTour(steps);
         return;
@@ -3042,7 +3003,6 @@ function showHint(hintEl) {
 
     const key = hintEl.getAttribute('data-hint-i18n');
     if (!key) return;
-    track('help_hint', { type: 'tooltip', topic: key });
 
     hintActive = true;
     miniTourSteps = null;
